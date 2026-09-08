@@ -110,6 +110,15 @@ type Feedback =
  * what went wrong has to do the work the commentary normally does. Auto-hints
  * stay away for the same reason; the hint buttons remain for being truly stuck.
  */
+/**
+ * How many wrong strokes in a row make a writing that came apart rather than a
+ * writing with mistakes in it. Two is a pair worth naming one by one; three in
+ * a row is a derailment, and naming each of them says less than naming the
+ * stroke it started at.
+ */
+const DERAILED_RUN = 3;
+
+
 @Component({
   selector: 'app-kanji-writing-exercise',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -218,6 +227,9 @@ type Feedback =
           }
           @if (flawless()) {
             {{ 'kanji.feedback.flawless' | translate }}
+          } @else if (derailedFrom(); as from) {
+            <!-- One place instead of a list: see derailedFrom. -->
+            {{ 'kanji.feedback.off-from' | translate: { stroke: from } }}
           } @else if (offCount() === 1) {
             {{ 'kanji.feedback.off-one' | translate: { total: strokeCount() } }}
           } @else if (offCount() > 1) {
@@ -255,7 +267,7 @@ type Feedback =
     <!-- Why a stroke was turned down, one line each. It changes no verdict; it
          is the difference between a red stroke and knowing that the hook was
          missing. Only after the writing is finished, so it stays a test. -->
-    @if (deferred() && complete() && offReasons().length) {
+    @if (deferred() && complete() && !derailedFrom() && offReasons().length) {
       <ul class="misfits">
         @for (off of offReasons(); track off.stroke) {
           <li>
@@ -500,6 +512,28 @@ export class WritingExerciseComponent implements OnDestroy {
 
   /** Strokes that went differently, for the reveal after a deferred writing. */
   protected readonly offCount = computed(() => (this.deferred() ? this.mistakes() : 0));
+
+  /**
+   * Where a writing came apart: the stroke a run of wrong ones starts at. A
+   * stroke drawn in the wrong place is one mistake, and worth its own reason;
+   * a stroke missed or drawn twice shifts every stroke after it, and each of
+   * those is then judged against a model stroke it was never meant to be.
+   * Three in a row is that, and one place to look beats a column of reasons -
+   * whether the writing found its way back before the end or not.
+   */
+  protected readonly derailedFrom = computed(() => {
+    if (!this.complete() || !this.deferred()) {
+      return undefined;
+    }
+    let run = 0;
+    for (const [index, stroke] of this.drawnInk().entries()) {
+      run = stroke.correct ? 0 : run + 1;
+      if (run === DERAILED_RUN) {
+        return index + 2 - DERAILED_RUN;
+      }
+    }
+    return undefined;
+  });
 
   protected readonly inkPaths = computed(() => this.drawnInk().map(stroke => stroke.path));
 
