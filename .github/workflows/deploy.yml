@@ -44,6 +44,7 @@ jobs:
         run: npm run build
 
       - name: Show dist structure
+        if: always()
         run: find dist -type f | head -50
 
       - name: Upload Pages artifact
