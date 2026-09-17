@@ -130,11 +130,14 @@ async function rehashServiceWorker() {
   // agrees with. If it is not, the hashing here is not the hashing Angular
   // does any more, and a fixed-up index.html would be a guess.
   for (const [url, recorded] of Object.entries(manifest.hashTable)) {
-    if (url !== '/index.html' && (await sha1(url)) !== recorded) {
+    if (!url.endsWith('/index.html') && (await sha1(url)) !== recorded) {
       throw new Error(`ngsw.json hashes are no longer plain sha1 (${url}); rework rehashServiceWorker`);
     }
   }
 
-  manifest.hashTable['/index.html'] = await sha1('/index.html');
+  const indexKey = Object.keys(manifest.hashTable).find(k => k.endsWith('/index.html'));
+  if (indexKey) {
+    manifest.hashTable[indexKey] = await sha1(indexKey);
+  }
   await writeFile(join(DIST, 'ngsw.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 }
