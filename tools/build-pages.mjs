@@ -122,9 +122,9 @@ async function rehashServiceWorker() {
   }
 
   const sha1 = async url =>
-    createHash('sha1')
-      .update(await readFile(join(DIST, url)))
-      .digest('hex');
+  createHash('sha1')
+    .update(await readFile(join(DIST, url.replace(/^\/katsu\//, '/'))))
+    .digest('hex');
 
   // Every other file is untouched, so its recorded hash has to be one this
   // agrees with. If it is not, the hashing here is not the hashing Angular
